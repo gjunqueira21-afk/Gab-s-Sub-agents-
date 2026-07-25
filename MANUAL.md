@@ -20,9 +20,10 @@ Time de 9 subagentes de finanças + jurídico (CredIA / Álamos / Ihus / Trading
 
 Formatos por plataforma:
 
-- **Claude Code**: `agents/*.md` (Markdown com frontmatter YAML, nomes em kebab-case: `fidc-economics`)
+- **Claude Code**: `claude-code/agents/*.md` (Markdown com frontmatter YAML, nomes em kebab-case: `fidc-economics`) — **fonte da verdade**
 - **Codex CLI**: `codex/agents/*.toml` (TOML com `developer_instructions`, nomes em snake_case: `fidc_economics`)
-- **Hermes**: `hermes/hermes-agents.json` (JSON único com os 9 agentes)
+- **Hermes Agent** (Nous Research / Hostinger): `hermes/skills/<nome>/SKILL.md` (uma skill por agente)
+- **Export genérico**: `hermes/hermes-agents.json` (JSON único com os 9 agentes)
 
 ---
 
@@ -32,10 +33,7 @@ Formatos por plataforma:
 
 ```bash
 mkdir -p ~/.claude/agents
-cp agents/github-deep-research.md agents/fidc-economics.md agents/credito-analyst.md \
-   agents/backtest-analyst.md agents/equity-research-br.md agents/equity-research-us.md \
-   agents/macro-economist.md agents/quant-data-engineer.md agents/juridico-societario.md \
-   ~/.claude/agents/
+cp claude-code/agents/*.md ~/.claude/agents/
 ```
 
 Para instalar **apenas em um projeto** (em vez do nível de usuário), troque `~/.claude/agents` por `.claude/agents` na raiz do projeto.
@@ -44,7 +42,7 @@ Para instalar **apenas em um projeto** (em vez do nível de usuário), troque `~
 
 ```bash
 mkdir -p ~/.claude/commands
-cp commands/atualizar-agents.md ~/.claude/commands/
+cp claude-code/commands/atualizar-agents.md ~/.claude/commands/
 ```
 
 ### 1.3 Ativar o gatilho em linguagem natural
@@ -73,7 +71,7 @@ Abra o Claude Code e rode `/agents` — os 9 devem aparecer. Teste a delegação
 ### 1.6 Ajustes finos
 
 - `model: opus` no frontmatter dos pesados (`fidc-economics`, `juridico-societario`, `backtest-analyst`) para mais profundidade; `model: haiku` no `github-deep-research` para varreduras baratas.
-- Sem linha `tools:` no frontmatter, o agente herda TODAS as ferramentas da sessão, incluindo MCP servers (ex.: MCP do Postgres para `backtest-analyst` e `quant-data-engineer`) — é assim que os arquivos já vêm.
+- Os agentes vêm com uma linha `tools:` no frontmatter. **Remova essa linha** de um agente para ele herdar TODAS as ferramentas da sessão, incluindo MCP servers (ex.: MCP do Postgres para `backtest-analyst` e `quant-data-engineer`).
 - Exporte `GITHUB_TOKEN` e `FRED_API_KEY` no ambiente antes de abrir o Claude Code.
 
 ### 1.7 Desinstalar
@@ -176,7 +174,7 @@ E remova o bloco entre `<!-- BEGIN gab-sub-agents -->` e `<!-- END gab-sub-agent
 
 ### 3.5 Export genérico (outros "Hermes")
 
-Para qualquer outra ferramenta que aceite agentes em JSON, o repositório também traz `hermes/hermes-agents.json` (gerado pelo conversor `hermes/md-to-hermes.ts`, que requer [Bun](https://bun.sh): `cd hermes && bun md-to-hermes.ts ../agents`). Cada objeto tem `name`, `description`, `tools` e `system_prompt`.
+Para qualquer outra ferramenta que aceite agentes em JSON, o repositório também traz `hermes/hermes-agents.json` (gerado pelo conversor `hermes/md-to-hermes.ts`, que requer [Bun](https://bun.sh): `cd hermes && bun md-to-hermes.ts ../claude-code/agents`). Cada objeto tem `name`, `description`, `tools` e `system_prompt`. Ajustes no lado do destino: mapear os nomes de tools para as equivalentes do framework e trocar o caminho do Protocolo de auto-atualização para onde a ferramenta guarda os prompts.
 
 ---
 

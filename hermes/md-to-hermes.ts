@@ -4,7 +4,7 @@
 import { readdirSync, readFileSync, writeFileSync } from "fs";
 
 const dir = process.argv[2] ?? ".";
-const skip = /README|atualizar|^_/i;
+const skip = /README|atualizar/i;
 
 const agents = readdirSync(dir)
   .filter((f) => f.endsWith(".md") && !skip.test(f))

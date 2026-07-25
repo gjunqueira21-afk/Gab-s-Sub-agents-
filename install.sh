@@ -4,8 +4,8 @@
 # Time de 9 subagentes de finanças + jurídico (CredIA / Álamos / Ihus / Trading B3)
 #
 # Destinos:
-#   claude  → Claude Code : agents/*.md → ~/.claude/agents
-#                           commands/atualizar-agents.md → ~/.claude/commands
+#   claude  → Claude Code : claude-code/agents/*.md → ~/.claude/agents
+#                           claude-code/commands/atualizar-agents.md → ~/.claude/commands
 #   codex   → Codex CLI   : codex/agents/*.toml → ~/.codex/agents
 #                           codex/AGENTS-snippet.md → anexado ao ~/.codex/AGENTS.md
 #   hermes  → Hermes Agent: hermes/skills/* → ~/.hermes/skills/
@@ -27,8 +27,8 @@
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-AGENTS_DIR="$REPO_DIR/agents"
-COMMANDS_DIR="$REPO_DIR/commands"
+AGENTS_DIR="$REPO_DIR/claude-code/agents"
+COMMANDS_DIR="$REPO_DIR/claude-code/commands"
 CODEX_SRC="$REPO_DIR/codex"
 HERMES_SRC="$REPO_DIR/hermes"
 
