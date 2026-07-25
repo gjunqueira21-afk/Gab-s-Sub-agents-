@@ -8,7 +8,8 @@
 #                           commands/atualizar-agents.md → ~/.claude/commands
 #   codex   → Codex CLI   : codex/agents/*.toml → ~/.codex/agents
 #                           codex/AGENTS-snippet.md → anexado ao ~/.codex/AGENTS.md
-#   hermes  → Hermes      : hermes/hermes-agents.json → ~/.hermes/
+#   hermes  → Hermes Agent: hermes/skills/* → ~/.hermes/skills/
+#                           hermes/AGENTS-snippet.md → anexado ao ~/.hermes/AGENTS.md
 #   all     → todos os destinos acima
 #
 # Uso:
@@ -48,7 +49,7 @@ warn() { printf '  \033[33m!\033[0m %s\n' "$*"; }
 die()  { printf '\033[31mErro:\033[0m %s\n' "$*" >&2; exit 1; }
 
 usage() {
-  sed -n '2,26p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,27p' "$0" | sed 's/^# \{0,1\}//'
   exit 0
 }
 
@@ -163,32 +164,56 @@ install_codex() {
   say "Pronto! No Codex, os agents ficam disponíveis para Spawn; diga \"atualize meus agents\" para o fluxo de atualização."
 }
 
-# ---------- Hermes ----------
+# ---------- Hermes (Nous Research / Hostinger VPS) ----------
 
 install_hermes() {
-  local dest="${HERMES_HOME:-$HOME/.hermes}"
-  [ -n "$CUSTOM_DIR" ] && dest="$CUSTOM_DIR"
+  local root="${HERMES_HOME:-$HOME/.hermes}"
+  [ -n "$CUSTOM_DIR" ] && root="$CUSTOM_DIR"
+  local skills_dest="$root/skills"
+  local agents_md="$root/AGENTS.md"
 
   if $UNINSTALL; then
-    [ -f "$dest/hermes-agents.json" ] && rm "$dest/hermes-agents.json" \
-      && ok "removido hermes-agents.json de $dest" \
-      || warn "hermes-agents.json não encontrado em $dest"
+    local d removed=0
+    for d in "$HERMES_SRC/skills"/*/; do
+      d="$(basename "$d")"
+      if [ -d "$skills_dest/$d" ]; then
+        rm -rf "$skills_dest/$d"
+        ok "removida skill $d"
+        removed=$((removed + 1))
+      fi
+    done
+    [ "$removed" -gt 0 ] || warn "nenhuma skill deste repositório encontrada em $skills_dest"
+    if [ -f "$agents_md" ] && grep -qF "$MARK_BEGIN" "$agents_md"; then
+      awk -v b="$MARK_BEGIN" -v e="$MARK_END" '
+        $0==b {skip=1; next} $0==e {skip=0; next} !skip' "$agents_md" > "$agents_md.tmp" \
+        && mv "$agents_md.tmp" "$agents_md"
+      ok "bloco gab-sub-agents removido de $agents_md"
+    fi
     return
   fi
 
-  mkdir -p "$dest"
-  say "Instalando no Hermes → $dest"
-  # Regenera o JSON a partir dos .md se o bun estiver disponível; senão usa o commitado
-  if command -v bun >/dev/null 2>&1; then
-    (cd "$HERMES_SRC" && bun md-to-hermes.ts "$AGENTS_DIR" >/dev/null) \
-      && ok "hermes-agents.json regenerado a partir de agents/*.md" \
-      || warn "falha ao regenerar; usando o JSON commitado"
+  mkdir -p "$skills_dest"
+  say "Instalando no Hermes Agent → $skills_dest"
+  local d
+  for d in "$HERMES_SRC/skills"/*/; do
+    cp -r "$d" "$skills_dest/$(basename "$d")"
+    ok "skill $(basename "$d")"
+  done
+
+  if [ -f "$agents_md" ] && grep -qF "$MARK_BEGIN" "$agents_md"; then
+    warn "snippet já presente em $agents_md (nada a fazer)"
+  else
+    {
+      [ -f "$agents_md" ] && [ -s "$agents_md" ] && printf '\n'
+      printf '%s\n' "$MARK_BEGIN"
+      cat "$HERMES_SRC/AGENTS-snippet.md"
+      printf '%s\n' "$MARK_END"
+    } >> "$agents_md"
+    ok "snippet anexado a $agents_md"
   fi
-  cp "$HERMES_SRC/hermes-agents.json" "$dest/hermes-agents.json"
-  ok "hermes-agents.json ($(grep -c '"name"' "$HERMES_SRC/hermes-agents.json") agentes)"
   say ""
-  say "Pronto! Importe/aponte o Hermes para $dest/hermes-agents.json."
-  say "Se o seu Hermes usa outro diretório: ./install.sh hermes --dir /caminho"
+  say "Pronto! Reinicie o Hermes Agent para ele descobrir as skills novas."
+  say "Se o seu Hermes usa outro diretório de dados: ./install.sh hermes --dir /caminho"
 }
 
 # ---------- uninstall genérico ----------

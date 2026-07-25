@@ -28,7 +28,7 @@ chmod +x install.sh
 ./install.sh --list      # ver os agents
 ./install.sh claude      # Claude Code : agents + comando /atualizar-agents
 ./install.sh codex       # Codex CLI   : TOMLs + snippet no AGENTS.md
-./install.sh hermes      # Hermes      : hermes-agents.json
+./install.sh hermes      # Hermes Agent: skills SKILL.md + snippet no AGENTS.md
 ./install.sh all         # todos
 ```
 
@@ -49,7 +49,9 @@ agents/                  # 9 agents em Markdown (formato nativo do Claude Code)
 commands/                # /atualizar-agents (comando do Claude Code)
 codex/agents/            # os mesmos 9 em TOML (formato do Codex CLI)
 codex/AGENTS-snippet.md  # snippet para o ~/.codex/AGENTS.md (Spawn + atualização)
-hermes/                  # conversor md-to-hermes.ts + hermes-agents.json gerado
+hermes/skills/           # os 9 como skills do Hermes Agent (SKILL.md por pasta)
+hermes/AGENTS-snippet.md # snippet para o AGENTS.md do workspace do Hermes
+hermes/                  # + conversor md-to-hermes.ts e export genérico em JSON
 install.sh               # instalador para os três destinos
 MANUAL.md                # instalação manual passo a passo
 ```
@@ -69,7 +71,7 @@ MANUAL.md                # instalação manual passo a passo
 0 8 1 * * cd $HOME && claude -p "/atualizar-agents" --permission-mode acceptEdits >> $HOME/agents-update.log 2>&1
 ```
 
-Depois de qualquer atualização dos `.md`, regenere o JSON do Hermes: `cd hermes && bun md-to-hermes.ts ../agents` (ou rode `./install.sh hermes`, que regenera automaticamente se o Bun estiver instalado).
+No Hermes Agent (Hostinger VPS), diga "atualize meus agents" para ele mesmo — o snippet do `AGENTS.md` define o fluxo, e as skills têm o Protocolo de auto-atualização embutido.
 
 ## Ajustes finos
 

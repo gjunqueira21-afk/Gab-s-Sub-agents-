@@ -126,36 +126,57 @@ E remova o bloco correspondente do `~/.codex/AGENTS.md` (se instalou com `instal
 
 ---
 
-## 3. Hermes
+## 3. Hermes Agent (Nous Research — VPS da Hostinger)
 
-O Hermes consome os agentes em um único JSON (`hermes-agents.json`), gerado a partir dos `.md` pelo conversor `hermes/md-to-hermes.ts`.
+O Hermes Agent usa **skills**: pastas em `~/.hermes/skills/<nome>/` com um `SKILL.md` (Markdown com frontmatter YAML, padrão agentskills.io). Ele auto-descobre todas as pastas na inicialização. Os 9 agents já estão convertidos nesse formato em `hermes/skills/`.
 
-### 3.1 Gerar o JSON (opcional — o repositório já traz um pronto)
-
-Requer [Bun](https://bun.sh):
+### 3.1 Instalar (na máquina/VPS onde o Hermes roda)
 
 ```bash
-cd hermes
-bun md-to-hermes.ts ../agents
-# → gera hermes-agents.json na pasta atual
+mkdir -p ~/.hermes/skills
+cp -r hermes/skills/* ~/.hermes/skills/
 ```
 
-Rode de novo sempre que editar os `.md` para manter o Hermes em sincronia.
-
-### 3.2 Instalar
+E anexe o snippet de instruções ao `AGENTS.md` do workspace do Hermes (define a delegação automática e o fluxo "atualize meus agents"):
 
 ```bash
-mkdir -p ~/.hermes
-cp hermes/hermes-agents.json ~/.hermes/
+cat hermes/AGENTS-snippet.md >> ~/.hermes/AGENTS.md
 ```
 
-Se o seu Hermes usa outro diretório de configuração, copie o JSON para lá (ou defina `HERMES_HOME` e use `./install.sh hermes`). Cada objeto do JSON tem `name`, `description`, `tools` e `system_prompt` — importe/mapeie conforme a interface de agentes do seu Hermes.
+Reinicie o Hermes Agent para ele descobrir as skills novas.
 
-### 3.3 Desinstalar
+### 3.2 No VPS da Hostinger (jeito mais fácil)
+
+O Hermes tem acesso ao terminal do próprio VPS — você pode pedir para **ele mesmo** se instalar. Mande esta mensagem para o seu Hermes (via Telegram/WhatsApp/interface web):
+
+> Clone o repositório https://github.com/gjunqueira21-afk/Gab-s-Sub-agents- (branch claude/agents-claude-code-cnn7p6), entre na pasta e rode `./install.sh hermes`. Depois confirme que as 9 skills novas aparecem no seu diretório de skills.
+
+Alternativa manual: acesse o VPS pelo **Browser Terminal** do hPanel (ou SSH) e rode:
 
 ```bash
-rm ~/.hermes/hermes-agents.json
+git clone -b claude/agents-claude-code-cnn7p6 https://github.com/gjunqueira21-afk/Gab-s-Sub-agents-.git
+cd Gab-s-Sub-agents- && ./install.sh hermes
 ```
+
+> No deploy Docker da Hostinger, o diretório de dados do Hermes pode ser um volume montado em outro caminho. Descubra com `docker inspect <container> | grep -A3 Mounts` e use `./install.sh hermes --dir /caminho/do/volume`.
+
+### 3.3 Verificar
+
+Pergunte ao Hermes: *"quais skills você tem instaladas?"* — as 9 devem aparecer. Teste: *"use a skill fidc-economics para explicar o waterfall de um FIDC com subordinação de 20%"*.
+
+### 3.4 Desinstalar
+
+```bash
+cd ~/.hermes/skills && rm -rf github-deep-research fidc-economics credito-analyst \
+   backtest-analyst equity-research-br equity-research-us macro-economist \
+   quant-data-engineer juridico-societario
+```
+
+E remova o bloco entre `<!-- BEGIN gab-sub-agents -->` e `<!-- END gab-sub-agents -->` do `~/.hermes/AGENTS.md` (o `./install.sh hermes --uninstall` faz os dois passos).
+
+### 3.5 Export genérico (outros "Hermes")
+
+Para qualquer outra ferramenta que aceite agentes em JSON, o repositório também traz `hermes/hermes-agents.json` (gerado pelo conversor `hermes/md-to-hermes.ts`, que requer [Bun](https://bun.sh): `cd hermes && bun md-to-hermes.ts ../agents`). Cada objeto tem `name`, `description`, `tools` e `system_prompt`.
 
 ---
 
@@ -168,7 +189,7 @@ rm ~/.hermes/hermes-agents.json
 | "atualize meus agents" não dispara | Falta a linha no `~/.claude/CLAUDE.md` | Refaça o passo 1.3 |
 | Codex não delega | Snippet não está no `AGENTS.md` em uso | Confirme `~/.codex/AGENTS.md` (global) ou o `AGENTS.md` do projeto |
 | Cron não roda a atualização | Claude Code sem autenticação no ambiente do cron | Rode `claude` manualmente uma vez na máquina e confira `$HOME/agents-update.log` |
-| Hermes desatualizado após editar os `.md` | JSON não regenerado | Rode o passo 3.1 e copie de novo |
+| Hermes não vê as skills novas | Skills copiadas com o agente rodando, ou volume Docker em outro caminho | Reinicie o Hermes; no Docker da Hostinger, confirme o caminho do volume (passo 3.2) |
 
 ## 5. Notas
 
