@@ -1,17 +1,19 @@
 #!/usr/bin/env bash
 #
 # Gab's Sub-agents — instalador
+# Time de 9 subagentes de finanças + jurídico (CredIA / Álamos / Ihus / Trading B3)
 #
-# Instala os agents da pasta ./agents nos seguintes destinos:
-#
-#   claude  → Claude Code   (~/.claude/agents ou ./.claude/agents com --project)
-#   codex   → Codex CLI     (~/.codex/prompts, como custom prompts /nome)
-#   hermes  → Hermes        (~/.hermes/agents, ou defina HERMES_HOME)
+# Destinos:
+#   claude  → Claude Code : agents/*.md → ~/.claude/agents
+#                           commands/atualizar-agents.md → ~/.claude/commands
+#   codex   → Codex CLI   : codex/agents/*.toml → ~/.codex/agents
+#                           codex/AGENTS-snippet.md → anexado ao ~/.codex/AGENTS.md
+#   hermes  → Hermes      : hermes/hermes-agents.json → ~/.hermes/
 #   all     → todos os destinos acima
 #
 # Uso:
 #   ./install.sh claude              # instala no Claude Code (nível de usuário)
-#   ./install.sh claude --project    # instala no projeto atual (./.claude/agents)
+#   ./install.sh claude --project    # instala no projeto atual (./.claude/)
 #   ./install.sh codex
 #   ./install.sh hermes
 #   ./install.sh all
@@ -19,10 +21,18 @@
 #   ./install.sh claude --uninstall  # remove os agents instalados
 #   ./install.sh hermes --dir /caminho/custom   # destino personalizado
 #
+# Instalação manual passo a passo: veja MANUAL.md
+#
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 AGENTS_DIR="$REPO_DIR/agents"
+COMMANDS_DIR="$REPO_DIR/commands"
+CODEX_SRC="$REPO_DIR/codex"
+HERMES_SRC="$REPO_DIR/hermes"
+
+MARK_BEGIN='<!-- BEGIN gab-sub-agents -->'
+MARK_END='<!-- END gab-sub-agents -->'
 
 TARGET=""
 PROJECT=false
@@ -38,16 +48,19 @@ warn() { printf '  \033[33m!\033[0m %s\n' "$*"; }
 die()  { printf '\033[31mErro:\033[0m %s\n' "$*" >&2; exit 1; }
 
 usage() {
-  sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,26p' "$0" | sed 's/^# \{0,1\}//'
   exit 0
 }
 
-# Lista os arquivos de agent (ignora o template)
 agent_files() {
   find "$AGENTS_DIR" -maxdepth 1 -name '*.md' ! -name '_template.md' | sort
 }
 
-# Extrai um campo simples ("name:" ou "description:") do frontmatter YAML
+codex_agent_files() {
+  find "$CODEX_SRC/agents" -maxdepth 1 -name '*.toml' | sort
+}
+
+# Extrai um campo simples do frontmatter YAML (remove aspas externas, se houver)
 frontmatter_field() { # $1=arquivo $2=campo
   awk -v field="$2" '
     NR==1 && $0=="---" { in_fm=1; next }
@@ -55,17 +68,7 @@ frontmatter_field() { # $1=arquivo $2=campo
     in_fm && $0 ~ "^"field":" {
       sub("^"field":[[:space:]]*", ""); print; exit
     }
-  ' "$1"
-}
-
-# Corpo do agent sem o frontmatter
-agent_body() { # $1=arquivo
-  awk '
-    NR==1 && $0=="---" { in_fm=1; next }
-    in_fm && $0=="---" { in_fm=0; body=1; next }
-    body { print }
-    !in_fm && !body && NR==1 { print; body=1 }
-  ' "$1"
+  ' "$1" | sed 's/^"//; s/"$//; s/\\"/"/g'
 }
 
 list_agents() {
@@ -76,85 +79,122 @@ list_agents() {
     [ -n "$f" ] || continue
     name="$(frontmatter_field "$f" name)"
     desc="$(frontmatter_field "$f" description)"
-    printf '  \033[36m%-28s\033[0m %s\n' "${name:-$(basename "$f" .md)}" "${desc:-—}"
+    printf '  \033[36m%-24s\033[0m %.90s...\n' "${name:-$(basename "$f" .md)}" "${desc:-—}"
     count=$((count + 1))
   done <<< "$(agent_files)"
   say ""
-  say "Total: $count agent(s)"
-  [ "$count" -gt 0 ] || warn "Adicione seus agents como arquivos .md na pasta agents/ (veja agents/_template.md)"
+  say "Total: $count agent(s) + comando /atualizar-agents"
 }
 
-# ---------- instaladores ----------
+# ---------- Claude Code ----------
 
 install_claude() {
-  local dest
-  if $PROJECT; then dest="$PWD/.claude/agents"; else dest="$HOME/.claude/agents"; fi
-  [ -n "$CUSTOM_DIR" ] && dest="$CUSTOM_DIR"
+  local agents_dest commands_dest
+  if $PROJECT; then
+    agents_dest="$PWD/.claude/agents"; commands_dest="$PWD/.claude/commands"
+  else
+    agents_dest="$HOME/.claude/agents"; commands_dest="$HOME/.claude/commands"
+  fi
+  [ -n "$CUSTOM_DIR" ] && { agents_dest="$CUSTOM_DIR/agents"; commands_dest="$CUSTOM_DIR/commands"; }
 
-  if $UNINSTALL; then remove_from "$dest" "Claude Code"; return; fi
+  if $UNINSTALL; then
+    remove_files "$agents_dest" "Claude Code (agents)" "$(agent_files)"
+    [ -f "$commands_dest/atualizar-agents.md" ] && rm "$commands_dest/atualizar-agents.md" \
+      && ok "removido atualizar-agents.md de $commands_dest" || true
+    return
+  fi
 
-  mkdir -p "$dest"
-  say "Instalando no Claude Code → $dest"
+  mkdir -p "$agents_dest" "$commands_dest"
+  say "Instalando no Claude Code → $agents_dest"
   local f
   while IFS= read -r f; do
     [ -n "$f" ] || continue
-    cp "$f" "$dest/$(basename "$f")"
+    cp "$f" "$agents_dest/$(basename "$f")"
     ok "$(basename "$f")"
   done <<< "$(agent_files)"
+  cp "$COMMANDS_DIR/atualizar-agents.md" "$commands_dest/atualizar-agents.md"
+  ok "atualizar-agents.md → $commands_dest (comando /atualizar-agents)"
   say ""
-  say "Pronto! No Claude Code, os agents aparecem automaticamente."
-  say "Use /agents para ver e gerenciar, ou peça: \"use o agent <nome> para ...\""
+  say "Pronto! Verifique com /agents dentro do Claude Code."
+  say "Dica: adicione ao seu ~/.claude/CLAUDE.md a linha:"
+  say '  Quando eu disser "atualize meus agents", execute o comando /atualizar-agents (meu time personalizado de subagentes).'
 }
+
+# ---------- Codex CLI ----------
 
 install_codex() {
-  # O Codex CLI não tem sub-agents nativos; instalamos como custom prompts,
-  # invocáveis com /<nome> dentro do Codex.
-  local dest="${CODEX_HOME:-$HOME/.codex}/prompts"
-  [ -n "$CUSTOM_DIR" ] && dest="$CUSTOM_DIR"
+  local root="${CODEX_HOME:-$HOME/.codex}"
+  [ -n "$CUSTOM_DIR" ] && root="$CUSTOM_DIR"
+  local agents_dest="$root/agents"
+  local agents_md="$root/AGENTS.md"
 
-  if $UNINSTALL; then remove_from "$dest" "Codex CLI"; return; fi
+  if $UNINSTALL; then
+    remove_files "$agents_dest" "Codex CLI (agents)" "$(codex_agent_files)"
+    if [ -f "$agents_md" ] && grep -qF "$MARK_BEGIN" "$agents_md"; then
+      awk -v b="$MARK_BEGIN" -v e="$MARK_END" '
+        $0==b {skip=1; next} $0==e {skip=0; next} !skip' "$agents_md" > "$agents_md.tmp" \
+        && mv "$agents_md.tmp" "$agents_md"
+      ok "bloco gab-sub-agents removido de $agents_md"
+    fi
+    return
+  fi
 
-  mkdir -p "$dest"
-  say "Instalando no Codex CLI → $dest"
-  local f name desc out
+  mkdir -p "$agents_dest"
+  say "Instalando no Codex CLI → $agents_dest"
+  local f
   while IFS= read -r f; do
     [ -n "$f" ] || continue
-    name="$(frontmatter_field "$f" name)"
-    desc="$(frontmatter_field "$f" description)"
-    out="$dest/$(basename "$f")"
+    cp "$f" "$agents_dest/$(basename "$f")"
+    ok "$(basename "$f")"
+  done <<< "$(codex_agent_files)"
+
+  if [ -f "$agents_md" ] && grep -qF "$MARK_BEGIN" "$agents_md"; then
+    warn "snippet já presente em $agents_md (nada a fazer)"
+  else
     {
-      printf '# Agent: %s\n' "${name:-$(basename "$f" .md)}"
-      [ -n "$desc" ] && printf '# Quando usar: %s\n' "$desc"
-      printf '\nAssuma o papel descrito abaixo para esta tarefa.\n\n'
-      agent_body "$f"
-    } > "$out"
-    ok "$(basename "$f")  (use /$(basename "$f" .md) no Codex)"
-  done <<< "$(agent_files)"
+      [ -f "$agents_md" ] && [ -s "$agents_md" ] && printf '\n'
+      printf '%s\n' "$MARK_BEGIN"
+      cat "$CODEX_SRC/AGENTS-snippet.md"
+      printf '%s\n' "$MARK_END"
+    } >> "$agents_md"
+    ok "snippet anexado a $agents_md"
+  fi
   say ""
-  say "Pronto! Dentro do Codex, digite /<nome-do-agent> para ativar."
+  say "Pronto! No Codex, os agents ficam disponíveis para Spawn; diga \"atualize meus agents\" para o fluxo de atualização."
 }
 
+# ---------- Hermes ----------
+
 install_hermes() {
-  local dest="${HERMES_HOME:-$HOME/.hermes}/agents"
+  local dest="${HERMES_HOME:-$HOME/.hermes}"
   [ -n "$CUSTOM_DIR" ] && dest="$CUSTOM_DIR"
 
-  if $UNINSTALL; then remove_from "$dest" "Hermes"; return; fi
+  if $UNINSTALL; then
+    [ -f "$dest/hermes-agents.json" ] && rm "$dest/hermes-agents.json" \
+      && ok "removido hermes-agents.json de $dest" \
+      || warn "hermes-agents.json não encontrado em $dest"
+    return
+  fi
 
   mkdir -p "$dest"
   say "Instalando no Hermes → $dest"
-  local f
-  while IFS= read -r f; do
-    [ -n "$f" ] || continue
-    cp "$f" "$dest/$(basename "$f")"
-    ok "$(basename "$f")"
-  done <<< "$(agent_files)"
+  # Regenera o JSON a partir dos .md se o bun estiver disponível; senão usa o commitado
+  if command -v bun >/dev/null 2>&1; then
+    (cd "$HERMES_SRC" && bun md-to-hermes.ts "$AGENTS_DIR" >/dev/null) \
+      && ok "hermes-agents.json regenerado a partir de agents/*.md" \
+      || warn "falha ao regenerar; usando o JSON commitado"
+  fi
+  cp "$HERMES_SRC/hermes-agents.json" "$dest/hermes-agents.json"
+  ok "hermes-agents.json ($(grep -c '"name"' "$HERMES_SRC/hermes-agents.json") agentes)"
   say ""
-  say "Pronto! Se o seu Hermes usa outro diretório, rode novamente com:"
-  say "  ./install.sh hermes --dir /caminho/dos/agents"
+  say "Pronto! Importe/aponte o Hermes para $dest/hermes-agents.json."
+  say "Se o seu Hermes usa outro diretório: ./install.sh hermes --dir /caminho"
 }
 
-remove_from() { # $1=dir $2=nome do destino
-  local dir="$1" label="$2" f removed=0
+# ---------- uninstall genérico ----------
+
+remove_files() { # $1=dir $2=label $3=lista de arquivos-fonte
+  local dir="$1" label="$2" files="$3" f removed=0
   [ -d "$dir" ] || { warn "$label: diretório $dir não existe, nada a remover."; return; }
   say "Removendo agents de $label → $dir"
   while IFS= read -r f; do
@@ -164,7 +204,7 @@ remove_from() { # $1=dir $2=nome do destino
       ok "removido $(basename "$f")"
       removed=$((removed + 1))
     fi
-  done <<< "$(agent_files)"
+  done <<< "$files"
   [ "$removed" -gt 0 ] || warn "nenhum agent deste repositório encontrado em $dir"
 }
 
@@ -187,11 +227,6 @@ done
 
 if $LIST; then list_agents; exit 0; fi
 [ -n "$TARGET" ] || usage
-
-count="$(agent_files | grep -c . || true)"
-if [ "$count" -eq 0 ] && ! $UNINSTALL; then
-  die "nenhum agent encontrado em agents/. Adicione arquivos .md (veja agents/_template.md)."
-fi
 
 case "$TARGET" in
   claude) install_claude ;;
