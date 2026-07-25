@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Gab's Sub-agents — instalador
-# Time de 9 subagentes de finanças + jurídico (CredIA / Álamos / Ihus / Trading B3)
+# Time de 9 subagentes de finanças + jurídico
 #
 # Destinos:
 #   claude  → Claude Code : claude-code/agents/*.md → ~/.claude/agents

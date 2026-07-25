@@ -1,6 +1,6 @@
 # Manual de Instalação — Gab's Sub-agents
 
-Time de 9 subagentes de finanças + jurídico (CredIA / Álamos / Ihus / Trading B3), com processo de instalação para **Claude Code**, **Codex CLI** e **Hermes**.
+Time de 9 subagentes de finanças + jurídico, com processo de instalação para **Claude Code**, **Codex CLI** e **Hermes**.
 
 > Atalho: tudo abaixo pode ser feito de uma vez com `./install.sh claude`, `./install.sh codex`, `./install.sh hermes` ou `./install.sh all`. Este manual documenta o processo **manual**, passo a passo, para quem quer entender ou personalizar cada etapa.
 
@@ -55,7 +55,7 @@ Quando eu disser "atualize meus agents", execute o comando /atualizar-agents (me
 
 ### 1.4 Verificar
 
-Abra o Claude Code e rode `/agents` — os 9 devem aparecer. Teste a delegação: *"Use o subagente juridico-societario para comparar holding × PF na estrutura da Ihus."*
+Abra o Claude Code e rode `/agents` — os 9 devem aparecer. Teste a delegação: *"Use o subagente juridico-societario para comparar holding × pessoa física numa estrutura societária."*
 
 ### 1.5 Atualização dos agents
 

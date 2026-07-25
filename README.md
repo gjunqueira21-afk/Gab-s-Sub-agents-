@@ -1,6 +1,6 @@
-# Agents Financas — Time de Subagentes (CredIA / Álamos / Ihus / Trading B3)
+# Agents Financas — Time de Subagentes
 
-Nove especialistas de IA + comando de atualização, calibrados para o stack (Bun/Hono/TS + Python, Postgres, VPS) e os negócios do Gabriel. Empacotados para três runtimes: **Claude Code** (fonte da verdade), **Codex** (TOML) e **Hermes** (JSON).
+Nove especialistas de IA + comando de atualização, calibrados para o stack (Bun/Hono/TS + Python, Postgres, VPS). Empacotados para três runtimes: **Claude Code** (fonte da verdade), **Codex** (TOML) e **Hermes** (JSON).
 
 | Agente | Especialidade |
 |---|---|
